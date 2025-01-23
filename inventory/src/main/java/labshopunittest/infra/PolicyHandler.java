@@ -35,6 +35,9 @@ public class PolicyHandler {
             "\n\n##### listener DecreaseStock : " + orderPlaced + "\n\n"
         );
 
+        // Comments //
+        //상품 TV에 초기재고 10개에 대하여 5개의 상품이 들어오면 차감
+
         // Sample Logic //
         Inventory.decreaseStock(event);
     }
