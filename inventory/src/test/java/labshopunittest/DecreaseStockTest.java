@@ -51,7 +51,7 @@ public class DecreaseStockTest {
         Inventory entity = new Inventory();
 
         entity.setId(1L);
-        entity.setStock(10L);
+        entity.setStock(10);
         entity.setProductName("TV");
 
         repository.save(entity);
@@ -62,7 +62,7 @@ public class DecreaseStockTest {
 
         event.setId(1L);
         event.setProductId("1");
-        event.setQty(5L);
+        event.setQty(5);
         event.setCustomerId("CUST001");
         event.setProductName("TV");
 
@@ -104,8 +104,8 @@ public class DecreaseStockTest {
 
             LOGGER.info("Response received: {}", received.getPayload());
 
-            assertEquals(String.valueOf(outputEvent.getId()), 1L);
-            assertEquals(String.valueOf(outputEvent.getStock()), 5L);
+            assertEquals(String.valueOf(outputEvent.getId()), "1");
+            assertEquals(String.valueOf(outputEvent.getStock()), "5");
             assertEquals(String.valueOf(outputEvent.getProductName()), "TV");
         } catch (JsonProcessingException e) {
             // TODO Auto-generated catch block
