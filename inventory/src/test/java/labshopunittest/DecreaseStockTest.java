@@ -7,6 +7,7 @@ import static org.junit.Assert.assertTrue;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import labshopunittest.config.kafka.KafkaProcessor;
 import labshopunittest.domain.*;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -14,11 +15,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.cloud.contract.verifier.messaging.MessageVerifier;
-import org.springframework.cloud.contract.verifier.messaging.boot.AutoConfigureMessageVerifier;
-import org.springframework.cloud.contract.verifier.messaging.internal.ContractVerifierMessage;
-import org.springframework.cloud.contract.verifier.messaging.internal.ContractVerifierMessaging;
-import org.springframework.cloud.contract.verifier.messaging.internal.ContractVerifierObjectMapper;
 import org.springframework.cloud.stream.messaging.Processor;
 import org.springframework.cloud.stream.test.binder.MessageCollector;
 import org.springframework.context.ApplicationContext;
@@ -37,13 +33,13 @@ public class DecreaseStockTest {
     );
 
     @Autowired
+    private KafkaProcessor processor;
+
+    @Autowired
     private MessageCollector messageCollector;
 
     @Autowired
     private ApplicationContext applicationContext;
-
-    @Autowired
-    private MessageVerifier<Message<?>> messageVerifier;
 
     @Autowired
     public InventoryRepository repository;
@@ -65,7 +61,7 @@ public class DecreaseStockTest {
         OrderPlaced event = new OrderPlaced();
 
         event.setId(1L);
-        event.setProductId("TV001");
+        event.setProductId("1");
         event.setQty(5L);
         event.setCustomerId("CUST001");
         event.setProductName("TV");
@@ -78,38 +74,39 @@ public class DecreaseStockTest {
                 false
             );
         try {
-            this.messageVerifier.send(
+            String msg = objectMapper.writeValueAsString(event);
+
+            processor
+                .inboundTopic()
+                .send(
                     MessageBuilder
-                        .withPayload(event)
+                        .withPayload(msg)
                         .setHeader(
                             MessageHeaders.CONTENT_TYPE,
                             MimeTypeUtils.APPLICATION_JSON
                         )
                         .setHeader("type", event.getEventType())
-                        .build(),
-                    "labshopunittest"
+                        .build()
                 );
 
             //then:
-            Message<?> receivedMessage =
-                this.messageVerifier.receive(
-                        "labshopunittest",
-                        5000,
-                        TimeUnit.MILLISECONDS
-                    );
-            assertNotNull("Resulted event must be published", receivedMessage);
 
-            String receivedPayload = (String) receivedMessage.getPayload();
+            Message<String> received = (Message<String>) messageCollector
+                .forChannel(processor.outboundTopic())
+                .poll();
+
+            assertNotNull("Resulted event must be published", received);
+
             StockDecreased outputEvent = objectMapper.readValue(
-                receivedPayload,
+                (String) received.getPayload(),
                 StockDecreased.class
             );
 
-            LOGGER.info("Response received: {}", outputEvent);
+            LOGGER.info("Response received: {}", received.getPayload());
 
-            assertEquals(outputEvent.getId(), 1L);
-            assertEquals(outputEvent.getStock(), 5L);
-            assertEquals(outputEvent.getProductName(), "TV");
+            assertEquals(String.valueOf(outputEvent.getId()), 1L);
+            assertEquals(String.valueOf(outputEvent.getStock()), 5L);
+            assertEquals(String.valueOf(outputEvent.getProductName()), "TV");
         } catch (JsonProcessingException e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
